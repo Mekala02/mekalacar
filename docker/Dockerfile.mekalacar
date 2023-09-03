@@ -6,14 +6,6 @@ FROM ${BASE_IMAGE}
 #For ROS
 ENV ROS_DISTRO=${ROS_DISTRO}
 
-# 
-# setup entrypoint
-#
-# COPY scripts/ros_entrypoint.sh /ros_entrypoint.sh
-# RUN echo 'source /ros_entrypoint.sh' >> /root/.bashrc
-# RUN chmod 755 /ros_entrypoint.sh
-# ENTRYPOINT ["/ros_entrypoint.sh"]
-# CMD ["bash"]
 
 #
 # Arduino Cli
@@ -36,6 +28,8 @@ RUN pip3 install --no-cache-dir --verbose waitress
 RUN pip3 install --no-cache-dir --verbose docopt
 RUN pip3 install --no-cache-dir --verbose flask
 RUN pip3 install --no-cache-dir --verbose tqdm
+# issue https://answers.ros.org/question/396439/setuptoolsdeprecationwarning-setuppy-install-is-deprecated-use-build-and-pip-and-other-standards-based-tools/
+RUN pip3 install --no-cache-dir --verbose setuptools==58.2.0
 
 #
 # Install packages
@@ -46,5 +40,14 @@ RUN pip3 install --no-cache-dir --verbose tqdm
 # 	&& apt-get clean
 
 # ros-${ROS_DISTRO}-rtabmap \
+
+# 
+# setup entrypoint
+#
+COPY scripts/ros_entrypoint.bash /ros_entrypoint.bash
+RUN echo 'source /ros_entrypoint.bash' >> /root/.bashrc
+RUN chmod 755 /ros_entrypoint.bash
+ENTRYPOINT ["/ros_entrypoint.bash"]
+CMD ["bash"]
 
 WORKDIR /root
