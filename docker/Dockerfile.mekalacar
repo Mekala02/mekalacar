@@ -1,0 +1,50 @@
+ARG BASE_IMAGE
+ARG ROS_DISTRO
+
+FROM ${BASE_IMAGE}
+
+#For ROS
+ENV ROS_DISTRO=${ROS_DISTRO}
+
+# 
+# setup entrypoint
+#
+# COPY scripts/ros_entrypoint.sh /ros_entrypoint.sh
+# RUN echo 'source /ros_entrypoint.sh' >> /root/.bashrc
+# RUN chmod 755 /ros_entrypoint.sh
+# ENTRYPOINT ["/ros_entrypoint.sh"]
+# CMD ["bash"]
+
+#
+# Arduino Cli
+#
+RUN cd /tmp && \
+	wget https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Linux_ARM64.tar.gz && \
+	tar -xvf arduino-cli_latest_Linux_ARM64.tar.gz && \
+	mv arduino-cli /usr/bin && \
+	cd ../
+RUN arduino-cli core install arduino:avr && \
+	arduino-cli lib install servo && \
+	arduino-cli lib install ewma
+
+#
+# python pip packages
+#
+RUN pip3 install --no-cache-dir --verbose PrettyTable
+RUN pip3 install --no-cache-dir --verbose pyserial
+RUN pip3 install --no-cache-dir --verbose waitress
+RUN pip3 install --no-cache-dir --verbose docopt
+RUN pip3 install --no-cache-dir --verbose flask
+RUN pip3 install --no-cache-dir --verbose tqdm
+
+#
+# Install packages
+#
+# RUN apt-get update && \
+# 	apt-get install -y --no-install-recommends \
+#     	ros-${ROS_DISTRO}-rtabmap-ros \
+# 	&& apt-get clean
+
+# ros-${ROS_DISTRO}-rtabmap \
+
+WORKDIR /root
