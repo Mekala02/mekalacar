@@ -1,0 +1,4 @@
+<launch>
+    <rosparam file="$(find arduino)/config/arduino_config.yaml" />
+    <node pkg="arduino" type="arduino_node.py" name="arduino_node" output="screen"></node>
+</launch>
