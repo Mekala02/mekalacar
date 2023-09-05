@@ -17,7 +17,7 @@ import re
 class Arduino(Node):
     def __init__(self):
         super().__init__('arduino')
-        
+
         node = rclpy.create_node('arduino')
 
         self.act_value_type = node.declare_parameter("act_value_TYPE", rclpy.Parameter.Type.STRING).value
@@ -50,7 +50,8 @@ class Arduino(Node):
         self.mode2 = 0
         self.speed = 0.0
 
-
+        self.rc_msg = Rc()
+        self.speed_msg = Float32()
         qos_profile = QoSProfile(depth=10)
         self.rc_pub = node.create_publisher(Rc, "rc", qos_profile)
         self.encoder_pub = node.create_publisher(Float32, "encoder", qos_profile)
@@ -117,16 +118,14 @@ class Arduino(Node):
         self.steering = -pwm2float(self.steering_a)
         self.throttle = pwm2float(self.act_value_a)
 
-        msg = Rc()
-        msg.steering = self.steering
-        msg.throttle = self.throttle
-        msg.button1 = self.mode1
-        msg.button2 = self.mode2
-        self.rc_pub.publish(msg)
+        self.rc_msg.steering = self.steering
+        self.rc_msg.throttle = self.throttle
+        self.rc_msg.button1 = self.mode1
+        self.rc_msg.button2 = self.mode2
+        self.rc_pub.publish(self.rc_msg)
 
-        msg = Float32()
-        msg.data=self.speed
-        self.encoder_pub.publish(msg)
+        self.speed_msg.data=self.speed
+        self.encoder_pub.publish(self.speed_msg)
 
         # s is for stating start of steering value t is for throttle and e is for end, \r for read ending
         formatted_data = "s" + str(Steering_Signal) + "t" + str(Throttle_Signal) + 'e' + '\r'
