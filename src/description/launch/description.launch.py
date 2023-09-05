@@ -12,6 +12,7 @@ def generate_launch_description():
     urdf_file_name = 'description.urdf.xml'
     urdf = os.path.join(
         get_package_share_directory('description'),
+        "urdf",
         urdf_file_name)
     with open(urdf, 'r') as infp:
         robot_desc = infp.read()
