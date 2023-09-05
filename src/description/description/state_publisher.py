@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-from math import sin, cos, pi
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from geometry_msgs.msg import Quaternion
 from sensor_msgs.msg import JointState
 from tf2_ros import TransformBroadcaster, TransformStamped
 from rclpy.executors import ExternalShutdownException
@@ -29,14 +27,14 @@ class StatePublisher(Node):
         self.get_logger().info("{0} started".format(self.nodeName))
 
         # message declarations
-        self.joint_state = JointState()
+        self.joint_state_msg = JointState()
 
     def timer_callback(self):
     # update joint_state
         now = self.get_clock().now()
-        self.joint_state.header.stamp = now.to_msg()
-        self.joint_state.name = ["j_steering_f_r", "j_tire_f_r", "j_tire_r_r", "j_steering_f_l", "j_tire_f_l", "j_tire_r_l"]
-        self.joint_state.position = [
+        self.joint_state_msg .header.stamp = now.to_msg()
+        self.joint_state_msg .name = ["j_steering_f_r", "j_tire_f_r", "j_tire_r_r", "j_steering_f_l", "j_tire_f_l", "j_tire_r_l"]
+        self.joint_state_msg .position = [
             self.j_steering_f_r,
             self.j_tire_f_r,
             self.j_tire_r_r,
@@ -46,7 +44,7 @@ class StatePublisher(Node):
         ]
 
         # send the joint state and transform
-        self.joint_pub.publish(self.joint_state)
+        self.joint_pub.publish(self.joint_state_msg )
 
 
     #     rospy.init_node("joint_states", anonymous=True)
