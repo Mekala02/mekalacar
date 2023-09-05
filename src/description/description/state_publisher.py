@@ -6,22 +6,14 @@ from rclpy.qos import QoSProfile
 from geometry_msgs.msg import Quaternion
 from sensor_msgs.msg import JointState
 from tf2_ros import TransformBroadcaster, TransformStamped
+from rclpy.executors import ExternalShutdownException
+
+import sys
 
 class StatePublisher(Node):
     def __init__(self):
-        rclpy.init()
         super().__init__('state_publisher')
     
-
-        qos_profile = QoSProfile(depth=10)
-        self.joint_pub = self.create_publisher(JointState, 'joint_states', qos_profile)
-        self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
-        self.nodeName = self.get_name()
-        self.get_logger().info("{0} started".format(self.nodeName))
-
-        loop_rate = self.create_rate(30)
-
-        # robot state
         self.j_steering_f_r = 0.0
         self.j_tire_f_r = 0.0
         self.j_tire_r_r = 0.0
@@ -29,36 +21,32 @@ class StatePublisher(Node):
         self.j_tire_f_l = 0.0
         self.j_tire_r_l = 0.0
 
+        qos_profile = QoSProfile(depth=10)
+        self.joint_pub = self.create_publisher(JointState, 'joint_states', qos_profile)
+        self.broadcaster = TransformBroadcaster(self, qos=qos_profile)
+        self.nodeName = self.get_name()
+        self.timer = self.create_timer(1.0/30.0, self.timer_callback)
+        self.get_logger().info("{0} started".format(self.nodeName))
+
         # message declarations
-        joint_state = JointState()
+        self.joint_state = JointState()
 
-        try:
-            while rclpy.ok():
-                rclpy.spin_once(self)
+    def timer_callback(self):
+    # update joint_state
+        now = self.get_clock().now()
+        self.joint_state.header.stamp = now.to_msg()
+        self.joint_state.name = ["j_steering_f_r", "j_tire_f_r", "j_tire_r_r", "j_steering_f_l", "j_tire_f_l", "j_tire_r_l"]
+        self.joint_state.position = [
+            self.j_steering_f_r,
+            self.j_tire_f_r,
+            self.j_tire_r_r,
+            self.j_steering_f_l,
+            self.j_tire_f_l,
+            self.j_tire_r_l
+        ]
 
-                # update joint_state
-                now = self.get_clock().now()
-                joint_state.header.stamp = now.to_msg()
-                joint_state.name = ["j_steering_f_r", "j_tire_f_r", "j_tire_r_r", "j_steering_f_l", "j_tire_f_l", "j_tire_r_l"]
-                joint_state.position = [
-                    self.j_steering_f_r,
-                    self.j_tire_f_r,
-                    self.j_tire_r_r,
-                    self.j_steering_f_l,
-                    self.j_tire_f_l,
-                    self.j_tire_r_l
-                ]
-
-                # send the joint state and transform
-                self.joint_pub.publish(joint_state)
-
-                # This will adjust as needed per iteration
-                loop_rate.sleep()
-
-        except KeyboardInterrupt:
-            pass
-
-
+        # send the joint state and transform
+        self.joint_pub.publish(self.joint_state)
 
 
     #     rospy.init_node("joint_states", anonymous=True)
@@ -109,8 +97,19 @@ class StatePublisher(Node):
     #     time.sleep(0.05)
     #     rospy.loginfo("Joint State Publisher Node Stopped")
 
-def main():
-    node = StatePublisher()
+def main(args=None):
+    rclpy.init(args=args)
+    try:
+        state_publisher = StatePublisher()
+        rclpy.spin(state_publisher)
+    except KeyboardInterrupt:
+        pass
+    except ExternalShutdownException:
+        sys.exit(1)
+    finally:
+        state_publisher.shut_down()
+        rclpy.try_shutdown()
+        state_publisher.destroy_node()
 
 if __name__ == '__main__':
     main()
