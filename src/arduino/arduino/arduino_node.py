@@ -1,102 +1,26 @@
 #!/usr/bin/env python
+
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-
+from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import Float32
 from messages.msg import Rc
-# from common_functions import PID, Limiter, pwm2float, float2pwm
-import time
 
-class PID():
-    def __init__(self, Kp=0, Ki=0, Kd=0, I_max=1):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.I_max = I_max
-        self.current_time = 0
-        self.previous_time = 0
-        self.current_error = 0
-        self.previous_error = 0
-        self.P = 0
-        self.I = 0
-        self.D = 0
-
-    def __call__(self, current_value, requested_value):
-        self.current_time = time.time()
-        delta_time = self.current_time - self.previous_time
-        self.current_error = requested_value - current_value
-        delta_error = self.current_error - self.previous_error
-
-        self.P = self.Kp * self.current_error
-        self.I += self.Ki * self.current_error * delta_time
-        self.D = self.Kd * delta_error / delta_time
-
-        # Integrator limit
-        if self.I > self.I_max: self.I = self.I_max
-        if self.I < -self.I_max: self.I = -self.I_max
-
-        # Integrator Reset
-        # if - 0.1 < self.current_error < 0.1: self.I = 0
-
-        self.previous_time = self.current_time
-        self.previous_error = self.current_error
-
-        return self.P + self.I + self.D
-
-class Limiter():
-    def __init__(self, min_=0, max_=1):
-        self.min = min_
-        self.max = max_
-
-    def __call__(self, value):
-        if value > self.max:
-            return self.max
-        elif value < self.min:
-            return self.min
-        else:
-            return value
-
-def sgn(x):
-    return (x > 0) - (x < 0)
-
-def pwm2float(value):
-    return (value - 1500) / 500
-
-def float2pwm(value):
-    return int(value * 500 + 1500)
-
-# import rospy
-# from std_msgs.msg import String, Float32
-# from arduino.msg import rc
-# from common.common_functions import PID, Limiter, pwm2float, float2pwm
+from arduino.common_functions import PID, Limiter, pwm2float, float2pwm
 
 import serial
 import time
+import sys
 import re
 
 class Arduino(Node):
     def __init__(self):
-        rclpy.init()
         super().__init__('arduino')
-        qos_profile = QoSProfile(depth=10)
-        node = rclpy.create_node('arduino')
-        node.get_logger().info('Created node')
-
-        self.outputs = {"Steering": 0, "Throttle": 0, "Speed": 0, "Mode1": 0, "Mode2": 0, "Target_Speed": None}
-        # Also It can output Act_Value, Record and drive mode acoording to mode button
-        # self.act_value_type = memory.cfg["ACT_VALUE_TYPE"]
         
-        self.act_value_type = node.declare_parameter("ACT_VALUE_TYPE", rclpy.Parameter.Type.STRING).value
-        self.Steering_A = 1500
-        self.Act_Value_A = 1500
-        self.Speed_A = 0
-        self.mode1 = 0
-        self.mode2 = 0
-        self.steering = 0.0
-        self.Act_Value = 0
-        self.speed = 0.0
-        self.throttle = 0.0
+        node = rclpy.create_node('arduino')
+
+        self.act_value_type = node.declare_parameter("act_value_TYPE", rclpy.Parameter.Type.STRING).value
         self.ticks_per_unit = node.declare_parameter("ENCODER_TICKS_PER_UNIT", rclpy.Parameter.Type.INTEGER).value
         self.stick_multiplier = node.declare_parameter("TRANSMITTER_STICK_SPEED_MULTIPLIER", rclpy.Parameter.Type.DOUBLE).value
         self.steering_limiter = Limiter(
@@ -116,19 +40,30 @@ class Arduino(Node):
                 I_max=node.declare_parameter("K_PID", rclpy.Parameter.Type.STRING).value["I_max"]
             )
 
-        self.arduino = serial.Serial(port='/dev/ttyUSB0', baudrate=115200, timeout=0.006, write_timeout=0.006)
-        time.sleep(0.04)
+        self.steering_a = 1500
+        self.act_value_a = 1500
+        self.speed_a = 0.0
+        self.act_value = 0.0
+        self.steering = 0.0
+        self.throttle = 0.0
+        self.mode1 = 0
+        self.mode2 = 0
+        self.speed = 0.0
 
-        # self.rc_pub = rospy.Publisher('chatter', String)
+
+        qos_profile = QoSProfile(depth=10)
         self.rc_pub = node.create_publisher(Rc, "rc", qos_profile)
         self.encoder_pub = node.create_publisher(Float32, "encoder", qos_profile)
-        self.rate = self.create_rate(30)
 
-        # rospy.init_node("arduino", anonymous=True)
-        # self.rc_pub = rospy.Publisher("rc", rc, queue_size=10)
-        # self.encoder_pub = rospy.Publisher("encoder", Float32, queue_size=10)
-        # self.rate = rospy.Rate(120)
-        # rospy.loginfo("Arduino Successfully Added")
+        self.arduino = serial.Serial(port='/dev/ttyUSB0', baudrate=115200, timeout=0.006, write_timeout=0.006)
+        time.sleep(0.04)
+        node.get_logger().info("Node Created")
+        self.timer = self.create_timer(1.0/120.0, self.timer_callback)
+
+
+    def timer_callback(self):
+        self.grab_data()
+        self.update()
 
     def grab_data(self):
         buffer = False
@@ -138,19 +73,12 @@ class Arduino(Node):
         if buffer and buffer[0] == "s":
             # re.search(r"t\d+.\d+s\d+.\d+v\d+.\d+e", data) // todo
             data_array = re.split(r's|t|m|m|v|e', buffer)
-            self.Steering_A = int(data_array[1])
-            self.Act_Value_A = int(data_array[2])
+            self.steering_a = int(data_array[1])
+            self.act_value_a = int(data_array[2])
             # if 0 --> radio turned off, elif 1 --> mode 1, elif 2 --> mode 2
-            self.Mode1 = int(data_array[3])
-            self.Mode2 = int(data_array[4])
-            self.Speed_A = float(data_array[5])
-
-    def start_thread(self):
-        # rospy.loginfo("Arduino Node Starting")
-        while rclpy.ok():
-            self.grab_data()
-            self.update()
-            self.rate.sleep()
+            self.mode1 = int(data_array[3])
+            self.mode2 = int(data_array[4])
+            self.speed_a = float(data_array[5])
 
     def update(self):
         '''
@@ -159,26 +87,26 @@ class Arduino(Node):
         If char is between 1000, 2000 arduino will use that value to drive motors
         If char is = 0 arduino won't use that value for controlling the actuator
         '''
-        # # Speed_A is ticks/sec we converting it to unit/sec
-        self.Speed = self.Speed_A / self.ticks_per_unit
+        # # speed_a is ticks/sec we converting it to unit/sec
+        self.speed = self.speed_a / self.ticks_per_unit
         # pilot_mode_string = "Manuel"
         # # pilot_mode_string = self.memory.memory["Pilot_Mode"]
-        # self.Act_Value = pwm2float(self.Act_Value_A)
+        # self.act_value = pwm2float(self.act_value_a)
         # if pilot_mode_string == "Full_Auto":
         #     Steering_Signal = float2pwm(-self.memory.memory["Steering"])
         #     Throttle_Signal = float2pwm(self.memory.memory["Throttle"] * self.memory.memory["Motor_Power"])
         # elif pilot_mode_string == "Manuel" or pilot_mode_string == "Angle":
         #     if self.act_value_type == "Throttle":
-        #         self.Throttle = self.Act_Value
+        #         self.Throttle = self.act_value
         #         Throttle_Signal = 0
         #     elif self.act_value_type == "Speed":
-        #         self.Target_Speed = self.stick_multiplier * self.Act_Value
+        #         self.Target_Speed = self.stick_multiplier * self.act_value
         #         self.Throttle = self.throttle_limiter(self.pid(self.Speed, self.Target_Speed))
         #         Throttle_Signal = float2pwm(self.Throttle)
         #         self.memory.memory["Target_Speed"] = self.Target_Speed
         #     self.memory.memory["Throttle"] = self.Throttle
         #     if pilot_mode_string == "Manuel":
-        #         self.Steering = -pwm2float(self.Steering_A)
+        #         self.Steering = -pwm2float(self.steering_a)
         #         self.memory.memory["Steering"] = self.Steering
         #         Steering_Signal = 0
         #     if pilot_mode_string == "Angle":
@@ -186,8 +114,8 @@ class Arduino(Node):
 
         Steering_Signal = 0
         Throttle_Signal = 0
-        self.Steering = -pwm2float(self.Steering_A)
-        self.Throttle = pwm2float(self.Act_Value_A)
+        self.steering = -pwm2float(self.steering_a)
+        self.throttle = pwm2float(self.act_value_a)
 
         msg = Rc()
         msg.steering = self.steering
@@ -195,7 +123,7 @@ class Arduino(Node):
         msg.button1 = self.mode1
         msg.button2 = self.mode2
         self.rc_pub.publish(msg)
-        
+
         msg = Float32()
         msg.data=self.speed
         self.encoder_pub.publish(msg)
@@ -213,14 +141,20 @@ class Arduino(Node):
         self.arduino.close()
         # rospy.loginfo("Arduino Node Stopped")
 
-def main():
-    arduino = Arduino()      
+
+def main(args=None):
+    rclpy.init(args=args)
     try:
-        arduino.start_thread()
+        arduino = Arduino()      
+        rclpy.spin(arduino)
     except KeyboardInterrupt:
+        pass
+    except ExternalShutdownException:
+        sys.exit(1)
+    finally:
         arduino.shut_down()
-    # except rospy.ROSInitException:
-    #     arduino.shut_down()
+        rclpy.try_shutdown()
+        arduino.destroy_node()
 
 if __name__ == "__main__":
     main()
