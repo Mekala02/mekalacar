@@ -2,3 +2,6 @@
 	path = docker/jetson-containers
 	url = https://github.com/Mekala02/jetson-containers.git
 	branch = mekalacar
+[submodule "src/zed-ros2-wrapper"]
+	path = src/zed-ros2-wrapper
+	url = https://github.com/Mekala02/zed-ros2-wrapper.git
