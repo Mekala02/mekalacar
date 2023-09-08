@@ -5,6 +5,7 @@
 [submodule "src/zed-ros2-wrapper"]
 	path = src/zed-ros2-wrapper
 	url = https://github.com/Mekala02/zed-ros2-wrapper.git
+	branch = mekalacar
 [submodule "src/rtabmap_ros"]
 	path = src/rtabmap_ros
 	url = https://github.com/Mekala02/rtabmap_ros.git
