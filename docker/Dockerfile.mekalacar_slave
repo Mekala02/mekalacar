@@ -6,6 +6,9 @@ FROM ${BASE_IMAGE}
 #For ROS
 ENV ROS_DISTRO=${ROS_DISTRO}
 
+# issue https://answers.ros.org/question/396439/setuptoolsdeprecationwarning-setuppy-install-is-deprecated-use-build-and-pip-and-other-standards-based-tools/
+RUN pip3 install --no-cache-dir --verbose setuptools==58.2.0
+
 # 
 # setup entrypoint
 #
