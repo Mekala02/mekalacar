@@ -29,7 +29,8 @@ def generate_launch_description():
                 ])
             ]),
             launch_arguments={
-                "config_path": os.path.join(cwd, 'config', 'zed_common.yaml')
+                "config_path": os.path.join(cwd, 'config', 'zed_common.yaml'),
+                "cam_pose": "[0.0814,0.00875,0.11015,0.0,0.1745329,0.0]"
             }.items()
         ),
 
