@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source /opt/ros/humble/install/setup.bash
+source /opt/ros/foxy/install/setup.bash
 
 colcon build --parallel-workers $(nproc) --symlink-install \
     --event-handlers console_direct+ --base-paths src \
