@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 R="r35.3.1"
-ROS_DISTRO="humble"
+ROS_DISTRO="foxy"
 BASE_IMAGE="dustynv/ros:$ROS_DISTRO-pytorch-l4t-$R"
 MID_IMAGE="mekala02/mekalacar:ros2_middle"
 MID_R="r35.4.1"

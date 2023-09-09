@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ROS_DISTRO="humble"
+ROS_DISTRO="foxy"
 BASE_IMAGE=osrf/ros:$ROS_DISTRO-desktop
 
 cd ..
