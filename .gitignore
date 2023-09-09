@@ -192,3 +192,8 @@ qtcreator-*
 # Colcon custom files
 COLCON_IGNORE
 AMENT_IGNORE
+
+# Custom
+build1/
+install1/
+log1/
