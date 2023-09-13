@@ -20,7 +20,7 @@ class Arduino(Node):
 
         node = rclpy.create_node('arduino')
 
-        self.act_value_type = node.declare_parameter("act_value_TYPE", rclpy.Parameter.Type.STRING).value
+        self.act_value_type = node.declare_parameter("ACT_VALUE_TYPE", rclpy.Parameter.Type.STRING).value
         self.ticks_per_unit = node.declare_parameter("ENCODER_TICKS_PER_UNIT", rclpy.Parameter.Type.INTEGER).value
         self.stick_multiplier = node.declare_parameter("TRANSMITTER_STICK_SPEED_MULTIPLIER", rclpy.Parameter.Type.DOUBLE).value
         self.steering_limiter = Limiter(
