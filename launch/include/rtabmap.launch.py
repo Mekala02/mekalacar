@@ -61,11 +61,6 @@ def launch_setup(context, *args, **kwargs):
             remappings=remappings,
             arguments=['-d'])
 
-    # Node(
-    #     package='rtabmap_viz', executable='rtabmap_viz', output='screen',
-    #     parameters=[parameters],
-    #     remappings=remappings),
-
     return [
         rtabmap_sync_node,
         rtabmap_slam_node
